@@ -4,7 +4,7 @@
 /// <reference path="../../../../../typings/lodash/lodash.d.ts" />
 /// <reference path="../../../../../typings/tedious/tedious.d.ts" />
 
-import Artisan from 'artisan';
+import Artisan from 'artisan-framework';
 import * as _ from 'lodash';
 import { Connection, Request, ColumnValue, TYPES } from 'tedious';
 

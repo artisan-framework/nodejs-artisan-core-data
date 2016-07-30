@@ -4,7 +4,7 @@
 ///<reference path="../../../../../typings/lodash/lodash.d.ts"/>
 
 import * as _ from 'lodash';
-import Artisan from 'artisan';
+import Artisan from 'artisan-framework';
 import Verify = Artisan.Core.Exceptions.Verify;
 import { IConnection } from 'mysql';
 

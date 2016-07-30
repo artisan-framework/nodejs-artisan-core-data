@@ -3,7 +3,7 @@
 ///<reference path="./typings/artisan/artisan.d.ts"/>
 ///<reference path="./typings/lodash/lodash.d.ts"/>
 
-import Artisan from 'artisan';
+import Artisan from 'artisan-framework';
 import { merge } from 'lodash';
 
 var requireAll = require('require-all');

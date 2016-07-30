@@ -4,7 +4,7 @@
 
 import * as mysql from 'mysql';
 
-import Artisan from 'artisan';
+import Artisan from 'artisan-framework';
 import Verify = Artisan.Core.Exceptions.Verify;
 
 import ISqlCommand from '../ISqlCommand';
