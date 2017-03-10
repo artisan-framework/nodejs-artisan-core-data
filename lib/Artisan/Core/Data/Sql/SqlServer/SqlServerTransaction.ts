@@ -1,7 +1,4 @@
-///<reference path="../../../../../typings/lodash/lodash.d.ts"/>
-///<reference path="../../../../../typings/tedious/tedious.d.ts"/>
-
-import { Connection } from 'tedious';
+import { Transaction } from 'mssql';
 import DataException from '../../Exceptions/DataException';
 import ISqlTransaction from '../ISqlTransaction';
 
@@ -10,34 +7,26 @@ import ISqlTransaction from '../ISqlTransaction';
  * established against a SQL Server database.
  */
 class SqlServerTransaction implements ISqlTransaction {
-   private _connection: Connection;
+   private _transaction: Transaction;
    
    /**
     * Creates a new instance.
     */
-   constructor(connection: Connection) {
-      this._connection = connection;
+   constructor(transaction: Transaction) {
+      this._transaction = transaction;
    }
 
-   commit(): Promise<boolean> {
-      return new Promise((resolve, reject) => {
-         this._connection.commitTransaction(function (err) {
-            if (err) {
-               reject(new DataException('An error occurred while attempting to commit the transaction.', err));
-               return;
-            }
-
-            resolve(true);
-         });
-      });
+   public async commit(): Promise<void> {
+      try {
+         await this._transaction.commit();
+      }
+      catch (ex) {
+         throw new DataException('An error occurred while attempting to commit the transaction.', ex);
+      }
    }
 
-   rollback(): Promise<boolean> {
-      return new Promise((resolve, reject) => {
-         this._connection.rollbackTransaction(function () {
-            resolve(true);
-         });
-      });
+   public async rollback(): Promise<void> {
+      await this._transaction.rollback();
    }
 }
 

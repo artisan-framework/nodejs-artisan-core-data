@@ -30,7 +30,7 @@ interface ISqlDatabase {
      * @param  {ISqlCommand} command - The command to be executed.
      * @returns Promise - The result, indicating whether or not the statement was successful.
      */
-    executeNonQuery(command: ISqlCommand): Promise<boolean>;
+    executeNonQuery(command: ISqlCommand): Promise<void>;
     
     /**
      * Translates the '*' wildcard characters in the specified value, based on the underlying provider.

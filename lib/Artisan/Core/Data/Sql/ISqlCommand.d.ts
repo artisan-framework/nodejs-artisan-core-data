@@ -66,7 +66,7 @@ interface ISqlCommand extends IDisposable {
      * Async - Executes the statement, expecting no result sets to be returned.
      * @returns Promise - The statement result.
      */
-    executeNonQuery(): Promise<boolean>;
+    executeNonQuery(): Promise<void>;
     
     /**
      * Async - Executes the statement, expecting one or more results sets to be returned.

@@ -1,12 +1,10 @@
 /// <reference path="../../../../../typings/artisan/artisan.d.ts" />
 /// <reference path="../../../../../typings/artisan/artisan-core.d.ts" />
 
-/// <reference path="../../../../../typings/lodash/lodash.d.ts" />
-/// <reference path="../../../../../typings/tedious/tedious.d.ts" />
-
 import Artisan from 'artisan-framework';
+import ArgumentException = Artisan.Core.Exceptions.ArgumentException;
 import * as _ from 'lodash';
-import { Connection, Request, ColumnValue, TYPES } from 'tedious';
+import { Connection, Request, Transaction, ISOLATION_LEVEL, TYPES, Table } from 'mssql';
 
 import DataException from '../../Exceptions/DataException';
 import ISqlCommand from '../ISqlCommand';
@@ -15,12 +13,13 @@ import ISqlDataReader from '../ISqlDataReader';
 import SqlDataType from '../SqlDataType';
 import SqlParameter from '../Impl/SqlParameter';
 import BufferedDataReader from '../Impl/BufferedDataReader';
-import SqlServerDataType from './SqlServerDataType';
 import SqlServerTransaction from './SqlServerTransaction';
 
 class SqlServerCommand implements ISqlCommand {
-  private _connection: Connection;
   private _request: Request;
+  private _connection: Connection;
+  private _procedureName: string;
+
   private _outputParameters: {
     [parameterName: string]: any
   }
@@ -29,137 +28,74 @@ class SqlServerCommand implements ISqlCommand {
 
   constructor(procedureName: string, connection: Connection) {
     this._connection = connection;
-    this._request = new Request(procedureName, (err) => {
-      if (err) {
-        if (this._onError) {
-          this._onError(err);
-        }
-
-        return;
-      }
-    });
+    this._request = new Request(connection);
+    this._procedureName = procedureName;
 
     this._outputParameters = {};
   }
 
-  public addInParameter(name: string, value: any, type: string, ...options: any[]): void {
+  public addInParameter(name: string, value: any, type: string, ...options: Array<any>): void {
     var sqlServerOptions = this.getParameterOptions(type, options);
 
-    this._request.addParameter(name, this.getSqlServerDataType(type), value, sqlServerOptions);
+    this._request.input(name, this.getSqlServerDataType(type, options), value);
   }
 
-  public addInListParameter(name: string, value: any[], type: string, ...options: any[]) {
-    var table = this.getListParameter(type, value, options);
+  public addInListParameter(name: string, values: Array<any>, type: string, ...options: Array<any>) {
+    const tvp = new Table(null);
+    tvp.columns.add('Value', this.getSqlServerDataType(type, options), null);
+    
+    values.forEach((value) => {
+       tvp.rows.add(value);
+    });
 
-    this._request.addParameter(name, TYPES.TVP, table);
+    this._request.input(name, tvp);
   }
   
-  public addInDictionaryParameter(name: string, value: Array<Artisan.Core.Collections.Generic.KeyValuePair<any, any>>, keyType: string, keyOption: any, valueType, valueOption) {
-    var table = this.getDictionaryParameter(value, keyType, keyOption, valueType, valueOption);
+  public addInDictionaryParameter(name: string, values: Array<Artisan.Core.Collections.Generic.KeyValuePair<any, any>>, keyType: string, keyOption: any, valueType, valueOption) {
+    const tvp = new Table(null);
+    tvp.columns.add('Key', this.getSqlServerDataType(keyType, [keyOption]), null);
+    tvp.columns.add('Value', this.getSqlServerDataType(valueType, [valueOption]), null);
+    
+    values.forEach((kvp) => {
+       tvp.rows.add(kvp.Key, kvp.Value);
+    });
 
-    this._request.addParameter(name, TYPES.TVP, table);
+    this._request.input(name, tvp);
   }
 
-  public addOutParameter(name: string, type: string, ...options: any[]): void {
-    var sqlServerOptions = this.getParameterOptions(type, options);
-
-    this._request.addOutputParameter(name, this.getSqlServerDataType(type), null, sqlServerOptions);
+  public addOutParameter(name: string, type: string, ...options: Array<any>): void {
+    this._request.output(name, this.getSqlServerDataType(type, options), null);
   }
 
   public addInOutParameter(name: string, value: any, type: string, ...options: any[]): void {
-    var sqlServerOptions = this.getParameterOptions(type, options);
-
-    this._request.addOutputParameter(name, this.getSqlServerDataType(type), value, sqlServerOptions);
+    this._request.output(name, this.getSqlServerDataType(type, options), value);
   }
 
-  public beginTransaction(): Promise<ISqlTransaction> {
-    return new Promise((resolve, reject) => {
-      this._connection.beginTransaction((err) => {
-        if (err) {
-          reject(new DataException('An error occurred while attempting to start the transaction.', err));
-          return;
-        }
+  public async beginTransaction(): Promise<ISqlTransaction> {
+     try {
+        const transaction = new Transaction(this._connection);
+        await transaction.begin(ISOLATION_LEVEL.READ_COMMITTED);
 
-        resolve(new SqlServerTransaction(this._connection));
-      })
-    });
+        return new SqlServerTransaction(transaction);
+     }
+     catch (ex) {
+        throw new DataException('An error has occurred while attempting to start the transaction.', ex);
+     }
   }
 
-  public executeNonQuery(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      this._outputParameters = {};
-
-      this._request.on('returnValue', (parameterName: string, value: any) => {
-        this._outputParameters[parameterName] = value;
-      });
-
-      this._request.on('doneProc', function() {
-        resolve(true);
-      });
-
-      this._onError = function(err) {
-        reject(new DataException('An error occurred while attempting to execute the command.', err));
-      };
-
-      this._connection.callProcedure(this._request);
-    });
+  public async executeNonQuery(): Promise<void> {
+    await this._request.execute(this._procedureName);
   }
 
-  public executeReader(): Promise<ISqlDataReader> {
-    return new Promise((resolve, reject) => {
-      var results = [];
-      this._outputParameters = {};
-
-      var currentResult = null;
-      var isResultSet = false;
-
-      this._request.on('row', function(columns: ColumnValue[]) {
-        if (currentResult == null) {
-          currentResult = {
-            Rows: []
-          };
-        }
-        
-        var columnValues = {};
-        for (var columnName in columns) {
-          columnValues[columnName] = columns[columnName].value;
-        }
-        
-        currentResult.Rows.push(columnValues);
-      });
-
-      this._request.on('columnMetadata', function () {
-        isResultSet = true;
-      })
-      
-      this._request.on('doneInProc', function () {
-        if (!isResultSet) {
-          return;
-        }
-        
-        results.push(currentResult || { Rows: [] });
-        
-        currentResult = null;
-        isResultSet = false;
-      });
-
-      this._request.on('doneProc', function (rowCount: number, more: boolean, returnStatus: number, rows: any[]) {
-        if (returnStatus == 0) {
-          // Success!
-          resolve(new BufferedDataReader(results));  
-        }
-      });
-      
-      this._request.on('returnValue', (parameterName: string, value: any) => {
-        this._outputParameters[parameterName] = value;
-      });
-
-      this._onError = function(err) {
-        reject(new DataException('An error occurred while attempting to execute the query.', err));
+  public async executeReader(): Promise<ISqlDataReader> {
+    const mssqlResultSets: Array<any> = await this._request.execute(this._procedureName);
+    const resultSets = mssqlResultSets.map((mssqlResultSet) => {
+      return {
+         Rows: mssqlResultSet
       }
-
-      this._connection.callProcedure(this._request)
     });
+
+    return new BufferedDataReader(resultSets);
   }
 
   public getOutputParameter(name: string) {
@@ -186,54 +122,29 @@ class SqlServerCommand implements ISqlCommand {
     return null;
   }
   
-  private getSqlServerDataType(type: string) {
-    var sqlServerDataType = SqlServerDataType[type];
-    
-    if (!sqlServerDataType) {
-      throw new DataException(`The specified type [${type}] is not supported.`);
+  private getSqlServerDataType(type: string, options: any[]) {
+    switch(type) {
+       case SqlDataType.Byte:
+         return TYPES.TinyInt;
+       case SqlDataType.Guid:
+         return TYPES.UniqueIdentifier;
+       case SqlDataType.Int16:
+         return TYPES.SmallInt;
+       case SqlDataType.Int32:
+         return TYPES.Int;
+       case SqlDataType.NVarChar:
+         if (typeof (options[0]) !== 'number') {
+            throw new ArgumentException('options', 'The length of the NVarChar parameter must be specified.');
+         }
+         return TYPES.NVarChar(options[0]);
+       case SqlDataType.VarChar:
+         if (typeof (options[0]) !== 'number') {
+            throw new ArgumentException('options', 'The length of the NVarChar parameter must be specified.');
+         }
+         return TYPES.VarChar(options[0]);
     }
     
-    return sqlServerDataType;
-  }
-
-  private getListParameter(type: string, values: any[], options: any[]) {
-    var valueColumn = {
-      name: 'Value',
-      type: this.getSqlServerDataType(type)
-    };
-    
-    _.extend(valueColumn, this.getParameterOptions(type, options));
-    
-    var result = {
-      columns: [ valueColumn ],
-      rows: _.map(values, function (value: any) {
-        return [value];
-      })
-    };
-    
-    return result;
-  }
-  
-  private getDictionaryParameter(values: Array<Artisan.Core.Collections.Generic.KeyValuePair<any, any>>, keyType: string, keyOption: any, valueType: string, valueOption: any) {
-    var keyColumn = {
-      name: 'Key',
-      type: this.getSqlServerDataType(keyType)
-    };
-    
-    var valueColumn = {
-      name: 'Value',
-      type: this.getSqlServerDataType(valueType)
-    };
-    
-    _.extend(keyColumn, this.getParameterOptions(keyType, !!keyOption ? [keyOption] : []));
-    _.extend(valueColumn, this.getParameterOptions(valueType, !!valueOption ? [valueOption] : []));
-    
-    var result = {
-      columns: [ keyColumn, valueColumn ],
-      rows: values.map(a => [a.Key, a.Value])
-    };
-    
-    return result;
+    throw new DataException(`The specified type [${type}] is not supported.`);
   }
 }
 

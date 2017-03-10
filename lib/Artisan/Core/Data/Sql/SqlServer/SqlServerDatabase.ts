@@ -1,4 +1,4 @@
-import { Connection, Request } from 'tedious';
+import { Connection, Request } from 'mssql';
 
 import DataException from '../../Exceptions/DataException';
 import ISqlCommand from '../ISqlCommand';
@@ -14,30 +14,23 @@ class SqlServerDatabase implements ISqlDatabase {
 
   public connection: ISqlConnection;
 
-  createCommand(procedureName: string): Promise<ISqlCommand> {
-    return new Promise((resolve, reject) => {
-      try {
-        var connection = new Connection(this.connection.ConnectionOptions);
+  public async createCommand(procedureName: string): Promise<ISqlCommand> {
+    try {
+      const connection = new Connection(this.connection.ConnectionOptions);
+      await connection.connect();
 
-        connection.on('connect', function (err) {
-          if (err) {
-            reject(new DataException('An error occurred while attempting to create a new connection.', err));
-          }
-
-          resolve(new SqlServerCommand(procedureName, connection));
-        });
-      }
-      catch (err) {
-        throw new DataException('An error occurred while attempting to create a new connection.', err);
-      }
-    });
+      return new SqlServerCommand(procedureName, connection);
+    }
+    catch (err) {
+      throw new DataException('An error occurred while attempting to create a new connection.', err);
+    }
   }
 
   executeReader(command: ISqlCommand): Promise<ISqlDataReader> {
     return command.executeReader();
   }
 
-  executeNonQuery(command: ISqlCommand): Promise<boolean> {
+  executeNonQuery(command: ISqlCommand): Promise<void> {
     return command.executeNonQuery();
   }
 

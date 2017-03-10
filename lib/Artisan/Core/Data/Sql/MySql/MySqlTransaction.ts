@@ -8,7 +8,7 @@ class MySqlTransaction implements ISqlTransaction {
       this._connection = connection;
    }
 
-   commit(): Promise<boolean> {
+   public commit(): Promise<void> {
       return new Promise((resolve, reject) => {
          this._connection.commit(function (err) {
             if (err) {
@@ -18,15 +18,15 @@ class MySqlTransaction implements ISqlTransaction {
 
             resolve(true);
          });
-      });
+      }).then(() => {});
    }
 
-   rollback(): Promise<boolean> {
+   public rollback(): Promise<void> {
       return new Promise((resolve, reject) => {
          this._connection.rollback(function () {
             resolve(true);
          });
-      });
+      }).then(() => {});
    }
 }
 

@@ -1,6 +1,5 @@
 /// <reference path="../../../../../typings/artisan/artisan.d.ts"/>
 /// <reference path="../../../../../typings/artisan/artisan-core.d.ts"/>
-/// <reference path="../../../../../typings/mysql/mysql.d.ts"/>
 
 import * as mysql from 'mysql';
 
@@ -59,7 +58,7 @@ class MySqlDatabase implements ISqlDatabase {
         return command.executeReader();
     }
 
-    public executeNonQuery(command: ISqlCommand): Promise<boolean> {
+    public executeNonQuery(command: ISqlCommand): Promise<void> {
         return command.executeNonQuery();
     }
 

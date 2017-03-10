@@ -1,7 +1,5 @@
 ///<reference path="../../../../../typings/artisan/artisan.d.ts"/>
 ///<reference path="../../../../../typings/artisan/artisan-core.d.ts"/>
-///<reference path="../../../../../typings/mysql/mysql.d.ts"/>
-///<reference path="../../../../../typings/lodash/lodash.d.ts"/>
 
 import * as _ from 'lodash';
 import Artisan from 'artisan-framework';
@@ -95,12 +93,12 @@ class MySqlCommand implements ISqlCommand {
         });
     }
 
-    public executeNonQuery(): Promise<boolean> {
+    public executeNonQuery(): Promise<void> {
         var params = _.map(this._parameters, function() { return '?'; }).join(', ');
         var values = _.pluck(this._parameters, 'Value');
         var query = 'call ' + this._commandText + '(' + params + ')';
 
-        return new Promise<boolean>(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
             this._connection.query(query, values, (err) => {
                 if (err) {
                     reject(err);
@@ -109,7 +107,7 @@ class MySqlCommand implements ISqlCommand {
 
                 resolve(true);
             });
-        });
+        }).then(() => {});
     }
 
     public getOutputParameter(name: string): any {
