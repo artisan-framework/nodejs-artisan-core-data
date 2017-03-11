@@ -20,18 +20,12 @@ class SqlServerCommand implements ISqlCommand {
   private _connection: Connection;
   private _procedureName: string;
 
-  private _outputParameters: {
-    [parameterName: string]: any
-  }
-
   private _onError: any;
 
   constructor(procedureName: string, connection: Connection) {
     this._connection = connection;
     this._request = new Request(connection);
     this._procedureName = procedureName;
-
-    this._outputParameters = {};
   }
 
   public addInParameter(name: string, value: any, type: string, ...options: Array<any>): void {
@@ -99,11 +93,11 @@ class SqlServerCommand implements ISqlCommand {
   }
 
   public getOutputParameter(name: string) {
-    if (this._outputParameters[name] === undefined) {
+    if (this._request.parameters[name] === undefined) {
       throw new DataException(`Unable to retrieve output parameter [${name}].`)
     }
 
-    return this._outputParameters[name];
+    return this._request.parameters[name];
   }
 
   public dispose(): void {
