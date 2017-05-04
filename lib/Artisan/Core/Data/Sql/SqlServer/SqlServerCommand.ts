@@ -97,7 +97,7 @@ class SqlServerCommand implements ISqlCommand {
       throw new DataException(`Unable to retrieve output parameter [${name}].`)
     }
 
-    return this._request.parameters[name];
+    return this._request.parameters[name].value;
   }
 
   public dispose(): void {
