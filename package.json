@@ -1,33 +1,34 @@
 {
-  "name": "artisan-core-data",
-  "version": "1.1.2",
-  "main": "index.js",
-  "scripts": {
-    "gulp": "gulp",
-    "clean": "gulp clean",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "artisan-core": "^1.0.0",
-    "lodash": "^3.10.1",
-    "mssql": "^3.3.0",
-    "mysql": "^2.8.0",
-    "require-all": "^1.1.0"
-  },
-  "peerDependencies": {
-    "artisan-framework": "^1.0.0"
-  },
-  "devDependencies": {
-    "@types/lodash": "^3.10.1",
-    "@types/mssql": "^3.3.0",
-    "@types/mysql": "0.0.31",
-    "@types/node": "^7.0.5",
-    "babel-preset-es2015": "^6.1.18",
-    "gulp": "^3.9.0",
-    "gulp-babel": "^6.1.0",
-    "gulp-clean": "^0.3.2",
-    "gulp-sourcemaps": "^1.6.0",
-    "gulp-typescript": "^2.9.2",
-    "typescript": "^2.2.1"
-  }
+   "name": "artisan-core-data",
+   "version": "2.0.0",
+   "scripts": {
+      "build": "gulp",
+      "clean": "gulp clean",
+      "test": "echo \"Error: no test specified\" && exit 1"
+   },
+   "files": [
+      "/lib",
+      "/index.d.ts"
+   ],
+   "types": "index.d.ts",
+   "dependencies": {
+      "artisan-core": "^2.0.0",
+      "mssql": "^3.3.0",
+      "mysql": "^2.8.0"
+   },
+   "devDependencies": {
+      "@types/mssql": "^3.3.0",
+      "@types/mysql": "0.0.31",
+      "@types/node": "^7.0.5",
+      "dts-generator": "^2.1.0",
+      "gulp": "^3.9.1",
+      "gulp-clean": "^0.4.0",
+      "gulp-filter": "^5.1.0",
+      "gulp-plumber": "^1.2.0",
+      "gulp-tslint": "^8.1.3",
+      "gulp-typescript": "^5.0.0-alpha.3",
+      "run-sequence": "^2.2.1",
+      "tslint": "^5.11.0",
+      "typescript": "^3.0.3"
+   }
 }
