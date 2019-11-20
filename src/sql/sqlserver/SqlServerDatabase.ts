@@ -1,4 +1,4 @@
-import { Connection, Request } from 'mssql';
+import { ConnectionPool, Request } from 'mssql';
 
 import DataException from '../../exceptions/DataException';
 import ISqlCommand from '../ISqlCommand';
@@ -16,7 +16,7 @@ class SqlServerDatabase implements ISqlDatabase {
 
   public async createCommand(procedureName: string): Promise<ISqlCommand> {
     try {
-      const connection = new Connection(this.connection.ConnectionOptions);
+      const connection = new ConnectionPool(this.connection.ConnectionOptions);
       await connection.connect();
 
       return new SqlServerCommand(procedureName, connection);

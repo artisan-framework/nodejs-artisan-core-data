@@ -1,7 +1,7 @@
 import KeyValuePair from 'artisan-core/lib/collections/KeyValuePair';
 import NotSupportedException from 'artisan-core/lib/exceptions/NotSupportedException';
 import Verify from 'artisan-core/lib/exceptions/Verify';
-import { IConnection } from 'mysql';
+import { Connection } from 'mysql';
 import DataException from '../../exceptions/DataException';
 import BufferedDataReader from '../impl/BufferedDataReader';
 import SqlParameter from '../impl/SqlParameter';
@@ -18,7 +18,7 @@ import MySqlTransaction from './MySqlTransaction';
 class MySqlCommand implements ISqlCommand {
     private _commandText: string;
     private _commandType: string;
-    private _connection: IConnection;
+    private _connection: Connection;
     private _parameters: ISqlParameter[];
 
     /**

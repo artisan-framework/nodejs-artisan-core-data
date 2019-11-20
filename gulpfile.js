@@ -1,28 +1,14 @@
-var path = require('path');
 var gulp = require('gulp');
 var dts = require('dts-generator').default;
 var ts = require('gulp-typescript');
 var tslint = require('gulp-tslint');
 var clean = require('gulp-clean');
-var runSequence = require('run-sequence');
 var plumber = require('gulp-plumber');
 
 var tsProject = ts.createProject('./tsconfig.json');
 
-gulp.task('default', function(cb) {
-   runSequence(
-      'compile:clean',
-      [
-         'compile:copyStaticAssets',
-         'compile:ts:lint',
-         'compile:ts',
-         'compile:dts'
-      ],
-      cb);
-});
-
 gulp.task('compile:clean', function() {
-   return gulp.src(['./index.d.ts', 'lib/'], { read: false })
+   return gulp.src(['./index.d.ts', 'lib/'], { read: false, allowEmpty: true })
       .pipe(clean());
 });
 
@@ -43,7 +29,6 @@ gulp.task('compile:ts', function() {
 });
 
 gulp.task('compile:ts:lint', function() {
-   const configuration = require('./tslint.json');
    const program = require('tslint').Linter.createProgram('./tsconfig.json');
 
    return gulp.src('src/**/*.ts')
@@ -61,14 +46,31 @@ gulp.task('compile:ts:lint', function() {
 });
 
 gulp.task('compile:dts', function() {
-   dts({
-      name: `${ require('./package.json').name }/lib`,
+   return dts({
+      prefix: `${ require('./package.json').name }/lib`,
       project: '.',
       out: 'index.d.ts',
       indent: '   '
    })
 });
 
-gulp.task('watch', ['default'], function() {
-   gulp.watch(['./src/**/*'], ['default']);
-});
+gulp.task('default',
+   gulp.series(
+      'compile:clean',
+      gulp.parallel(
+         'compile:copyStaticAssets',
+         'compile:ts:lint',
+         'compile:ts',
+         'compile:dts'
+      )
+   )
+);
+
+gulp.task('watch',
+   gulp.series(
+      'default',
+      function() {
+         gulp.watch(['./src/**/*'], 'default');
+      }
+   )
+);

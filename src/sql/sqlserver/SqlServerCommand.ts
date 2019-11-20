@@ -1,6 +1,6 @@
 import KeyValuePair from 'artisan-core/lib/collections/KeyValuePair';
 import ArgumentException from 'artisan-core/lib/exceptions/ArgumentException';
-import { Connection, ISOLATION_LEVEL, Request, Table, Transaction, TYPES } from 'mssql';
+import { ConnectionPool, ISOLATION_LEVEL, Request, Table, Transaction, TYPES } from 'mssql';
 import DataException from '../../exceptions/DataException';
 import BufferedDataReader from '../impl/BufferedDataReader';
 import ISqlCommand from '../ISqlCommand';
@@ -11,12 +11,12 @@ import SqlServerTransaction from './SqlServerTransaction';
 
 class SqlServerCommand implements ISqlCommand {
   private _request: Request;
-  private _connection: Connection;
+  private _connection: ConnectionPool;
   private _procedureName: string;
 
   private _onError: any;
 
-  constructor(procedureName: string, connection: Connection) {
+  constructor(procedureName: string, connection: ConnectionPool) {
     this._connection = connection;
     this._request = new Request(connection);
     this._procedureName = procedureName;
@@ -30,7 +30,7 @@ class SqlServerCommand implements ISqlCommand {
 
   public addInListParameter(name: string, values: Array<any>, type: string, ...options: Array<any>) {
     const tvp = new Table('');
-    tvp.columns.add('Value', this.getSqlServerDataType(type, options), null);
+    tvp.columns.add('Value', this.getSqlServerDataType(type, options), undefined);
 
     values.forEach((value) => {
        tvp.rows.add(value);
@@ -41,8 +41,8 @@ class SqlServerCommand implements ISqlCommand {
 
   public addInDictionaryParameter(name: string, values: Array<KeyValuePair<any, any>>, keyType: string, keyOption: any, valueType: string, valueOption: any) {
     const tvp = new Table('');
-    tvp.columns.add('Key', this.getSqlServerDataType(keyType, [keyOption]), null);
-    tvp.columns.add('Value', this.getSqlServerDataType(valueType, [valueOption]), null);
+    tvp.columns.add('Key', this.getSqlServerDataType(keyType, [keyOption]), undefined);
+    tvp.columns.add('Value', this.getSqlServerDataType(valueType, [valueOption]), undefined);
 
     values.forEach((kvp) => {
        tvp.rows.add(kvp.Key, kvp.Value);
@@ -76,8 +76,8 @@ class SqlServerCommand implements ISqlCommand {
   }
 
   public async executeReader(): Promise<ISqlDataReader> {
-    const mssqlResultSets: Array<any> = await this._request.execute(this._procedureName);
-    const resultSets = mssqlResultSets.map((mssqlResultSet) => {
+    const mssqlResultSets = await this._request.execute(this._procedureName);
+    const resultSets = mssqlResultSets.recordsets.map((mssqlResultSet) => {
       return {
          Rows: mssqlResultSet
       };
