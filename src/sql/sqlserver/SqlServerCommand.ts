@@ -13,8 +13,7 @@ class SqlServerCommand implements ISqlCommand {
   private _request: Request;
   private _connection: ConnectionPool;
   private _procedureName: string;
-
-  private _onError: any;
+  private _outputParameters: { [key: string]: any } = {};
 
   constructor(procedureName: string, connection: ConnectionPool) {
     this._connection = connection;
@@ -76,8 +75,11 @@ class SqlServerCommand implements ISqlCommand {
   }
 
   public async executeReader(): Promise<ISqlDataReader> {
-    const mssqlResultSets = await this._request.execute(this._procedureName);
-    const resultSets = mssqlResultSets.recordsets.map((mssqlResultSet) => {
+    const procedureResult = await this._request.execute(this._procedureName);
+
+    this._outputParameters = procedureResult.output || {};
+
+    const resultSets = procedureResult.recordsets.map((mssqlResultSet) => {
       return {
          Rows: mssqlResultSet
       };
@@ -86,12 +88,12 @@ class SqlServerCommand implements ISqlCommand {
     return new BufferedDataReader(resultSets);
   }
 
-  public getOutputParameter(name: string) {
-    if (this._request.parameters[name] === undefined) {
+  public getOutputParameter(name: string): any {
+    if (this._outputParameters[name] === undefined) {
       throw new DataException(`Unable to retrieve output parameter [${name}].`);
     }
 
-    return this._request.parameters[name].value;
+    return this._outputParameters[name];
   }
 
   public dispose(): void {
